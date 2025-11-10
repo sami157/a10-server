@@ -65,11 +65,7 @@ app.get('/study-partners', async (req, res) => {
 });
 
 app.post('/partner-requests', async (req, res) => {
-  const { senderEmail, receiverId } = req.body; // Sender's email and receiver's ObjectId
-
-  if (!senderEmail || !receiverId) {
-    return res.status(400).json({ message: "Sender email and receiver ID are required" });
-  }
+  const { senderEmail, receiverId } = req.body;
 
   try {
     const db = client.db("studyMateDB");
@@ -84,16 +80,8 @@ app.post('/partner-requests', async (req, res) => {
 
     const partnerRequest = {
       senderEmail,
-      receiverProfile: {
-        name: receiver.name,
-        email: receiver.email,
-        subject: receiver.subject,
-        studyMode: receiver.studyMode,
-        availabilityTime: receiver.availabilityTime,
-        location: receiver.location,
-        experienceLevel: receiver.experienceLevel
-      },
-      status: 'pending', // Set initial status to 'pending'
+      receiverId,
+      status: 'pending',
       createdAt: new Date()
     };
 
@@ -107,6 +95,43 @@ app.post('/partner-requests', async (req, res) => {
   } catch (err) {
     console.log("Error sending partner request:", err);
     res.status(500).json({ message: "Error sending partner request", error: err });
+  }
+});
+
+app.delete('/partner-requests/:requestId', async (req, res) => {
+  const { requestId } = req.params;  // Get the requestId from the URL parameters
+
+  try {
+    const db = client.db("studyMateDB");
+    const partnerRequestsCollection = db.collection("partnerRequests");
+
+    const objectId = new ObjectId(requestId);
+    const result = await partnerRequestsCollection.deleteOne({ _id: objectId });
+
+    res.status(200).json({ message: "Partner request deleted successfully" });
+  } catch (err) {
+    console.log("Error deleting partner request:", err);
+    res.status(500).json({ message: "Error deleting partner request", error: err });
+  }
+});
+
+app.get('/partner-requests/sent/:senderEmail', async (req, res) => {
+  const { senderEmail } = req.params;
+
+  try {
+    const db = client.db("studyMateDB");
+    const partnerRequestsCollection = db.collection("partnerRequests");
+
+    const requests = await partnerRequestsCollection.find({ senderEmail }).toArray();
+
+    if (requests.length === 0) {
+      return res.status(404).json({ message: "No partner requests found from this sender" });
+    }
+
+    res.status(200).json(requests);
+  } catch (err) {
+    console.log("Error fetching partner requests:", err);
+    res.status(500).json({ message: "Error fetching partner requests", error: err });
   }
 });
 

@@ -19,23 +19,49 @@ const client = new MongoClient(uri, {
   }
 });
 
+// check for duplicate email
+const checkDuplicateEmail = async (req, res, next) => {
+  const { email } = req.body
+
+  try {
+    const db = client.db('studyMateDB');
+    const partnersCollection = db.collection("studyPartners");
+    const existingPartner = await partnersCollection.findOne({ email });
+
+    if (existingPartner) {
+      return res.status(409).json({ message: "Email already exists" });
+    }
+
+    next();
+  } catch (err) {
+    res.status(500).json({ message: "Error checking email", error: err });
+  }
+};
+
+
 async function run() {
   try {
     // Connect the client to the server	(optional starting in v4.7)
     await client.connect();
-  } finally {
-    console.log("MongoDB connected")
+  }
+  catch {
+
+  }
+  finally {
+
   }
 }
 run().catch(console.dir);
+
+const db = client.db("studyMateDB");
+const partnersCollection = db.collection("studyPartners");
 
 app.get('/', (req, res) => {
   res.send("StudyMate server is running");
 });
 
-app.post('/study-partners', async (req, res) => {
+app.post('/study-partners', checkDuplicateEmail, async (req, res) => {
   const studyPartner = req.body;
-
   try {
     const db = client.db('studyMateDB');
     const partnersCollection = db.collection("studyPartners");
@@ -53,9 +79,6 @@ app.post('/study-partners', async (req, res) => {
 
 app.get('/study-partners', async (req, res) => {
   try {
-    const db = client.db("studyMateDB");
-    const partnersCollection = db.collection("studyPartners");
-
     const partners = await partnersCollection.find().toArray();
 
     res.status(200).send(partners);
@@ -63,6 +86,32 @@ app.get('/study-partners', async (req, res) => {
     res.status(500).json({ message: "Error fetching study partners", error: err });
   }
 });
+
+app.get('/study-partners/check/:email', async (req, res) => {
+  try {
+    const { email } = req.params;
+    const existingPartner = await partnersCollection.findOne({ email });
+    existingPartner ? res.send(existingPartner) : res.send(false)
+  } catch (err) {
+    res.status(500).json({ message: "Error fetching study partners", error: err });
+  }
+});
+
+//Top 3 Partner Profiles
+app.get('/study-partners/top', async (req, res) => {
+  try {
+    const topPartners = await partnersCollection
+      .find({})
+      .sort({ rating: -1 })
+      .limit(3)
+      .toArray();
+
+    res.send(topPartners);
+  } catch (err) {
+    res.status(500).json({ message: "Error fetching top partners", error: err });
+  }
+});
+
 
 app.post('/partner-requests', async (req, res) => {
   const { senderEmail, receiverId } = req.body;
@@ -134,6 +183,7 @@ app.get('/partner-requests/sent/:senderEmail', async (req, res) => {
     res.status(500).json({ message: "Error fetching partner requests", error: err });
   }
 });
+
 
 app.listen(PORT, () => {
   console.log(`Server is running on ${PORT}`);

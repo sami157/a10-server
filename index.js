@@ -173,6 +173,33 @@ app.post('/partner-requests', checkDuplicatePartnerRequest, async (req, res) => 
   }
 });
 
+app.patch('/partner-requests', async (req, res) => {
+  const { senderEmail, receiverEmail, message } = req.body;
+
+  try {
+    const filter = { senderEmail, receiverId };
+
+    const result = await partnerRequestsCollection.updateOne(
+      filter,
+      { $set: { message } }
+    );
+
+    const updatedRequest = await partnerRequestsCollection.findOne(filter);
+
+    res.status(200).json({
+      message: "Partner request updated successfully",
+      request: updatedRequest
+    });
+
+  } catch (err) {
+    console.error("Error updating partner request:", err);
+    res.status(500).json({
+      message: "Error updating partner request",
+      error: err
+    });
+  }
+});
+
 app.delete('/partner-requests/:requestId', async (req, res) => {
   const { requestId } = req.params;
 

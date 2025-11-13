@@ -148,7 +148,7 @@ app.get('/study-partners/top', async (req, res) => {
 
 
 app.post('/partner-requests', checkDuplicatePartnerRequest, async (req, res) => {
-  const { senderEmail, receiverId } = req.body;
+  const { senderEmail, receiverId, message } = req.body;
   try {
     const receiver = await partnersCollection.findOne({ _id: new ObjectId(receiverId) });
     await partnersCollection.updateOne(
@@ -158,13 +158,14 @@ app.post('/partner-requests', checkDuplicatePartnerRequest, async (req, res) => 
     const partnerRequest = {
       senderEmail,
       receiverId,
+      message,
       status: 'pending',
       createdAt: new Date()
     };
     const result = await partnerRequestsCollection.insertOne(partnerRequest);
     res.status(201).json({
       message: "Partner request sent successfully",
-      requestId: result.insertedId
+      requestId: result.insertedId,
     });
 
   } catch (err) {
@@ -173,7 +174,7 @@ app.post('/partner-requests', checkDuplicatePartnerRequest, async (req, res) => 
 });
 
 app.delete('/partner-requests/:requestId', async (req, res) => {
-  const { requestId } = req.params;  // Get the requestId from the URL parameters
+  const { requestId } = req.params;
 
   try {
 
@@ -191,12 +192,7 @@ app.get('/partner-requests/sent/:senderEmail', async (req, res) => {
 
   try {
     const requests = await partnerRequestsCollection.find({ senderEmail }).toArray();
-
-    if (requests.length === 0) {
-      return res.status(404).json({ message: "No partner requests found from this sender" });
-    }
-
-    res.status(200).json(requests);
+    res.status(200).send(requests);
   } catch (err) {
     res.status(500).json({ message: "Error fetching partner requests", error: err });
   }

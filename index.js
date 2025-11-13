@@ -11,6 +11,7 @@ const uri = mongodbUri
 app.use(cors());
 app.use(express.json());
 
+
 const client = new MongoClient(uri, {
   serverApi: {
     version: ServerApiVersion.v1,
@@ -19,13 +20,15 @@ const client = new MongoClient(uri, {
   }
 });
 
+const db = client.db("studyMateDB");
+const partnersCollection = db.collection("studyPartners");
+const partnerRequestsCollection = db.collection("partnerRequests");
+
 // check for duplicate email
 const checkDuplicateEmail = async (req, res, next) => {
   const { email } = req.body
 
   try {
-    const db = client.db('studyMateDB');
-    const partnersCollection = db.collection("studyPartners");
     const existingPartner = await partnersCollection.findOne({ email });
 
     if (existingPartner) {
@@ -38,6 +41,30 @@ const checkDuplicateEmail = async (req, res, next) => {
   }
 };
 
+// check for duplicate partner request
+const checkDuplicatePartnerRequest = async (req, res, next) => {
+  const { senderEmail, receiverId } = req.body;
+
+  try {
+    const db = client.db("studyMateDB");
+    const partnerRequestsCollection = db.collection("partnerRequests");
+    const existingRequest = await partnerRequestsCollection.findOne({
+      senderEmail,
+      receiverId,
+      status: { $in: ["pending", "accepted"] }
+    })
+
+    if (existingRequest) {
+      return res.status(409)
+        .json({ message: "Duplicate request: A partner request already exists." });
+    }
+
+    next();
+  } catch (err) {
+    console.error("Error checking duplicate request:", err);
+    res.status(500).json({ message: "Error checking duplicate request", error: err });
+  }
+};
 
 async function run() {
   try {
@@ -52,10 +79,6 @@ async function run() {
   }
 }
 run().catch(console.dir);
-
-const db = client.db("studyMateDB");
-const partnersCollection = db.collection("studyPartners");
-const partnerRequestsCollection = db.collection("partnerRequests");
 
 app.get('/', (req, res) => {
   res.send("StudyMate server is running");
@@ -92,7 +115,6 @@ app.get('/study-partners/find/:id', async (req, res) => {
     const id = req.params.id;
     const partner = await partnersCollection.findOne({ _id: new ObjectId(id) });
     res.status(200).send(partner);
-    console.log(partner)
   } catch (err) {
     res.status(500).json({ message: "Error fetching study partner", error: err });
   }
@@ -125,7 +147,7 @@ app.get('/study-partners/top', async (req, res) => {
 });
 
 
-app.post('/partner-requests', async (req, res) => {
+app.post('/partner-requests', checkDuplicatePartnerRequest, async (req, res) => {
   const { senderEmail, receiverId } = req.body;
   try {
     const receiver = await partnersCollection.findOne({ _id: new ObjectId(receiverId) });
@@ -146,7 +168,6 @@ app.post('/partner-requests', async (req, res) => {
     });
 
   } catch (err) {
-    console.log("Error sending partner request:", err);
     res.status(500).json({ message: "Error sending partner request", error: err });
   }
 });
@@ -161,7 +182,6 @@ app.delete('/partner-requests/:requestId', async (req, res) => {
 
     res.status(200).json({ message: "Partner request deleted successfully" });
   } catch (err) {
-    console.log("Error deleting partner request:", err);
     res.status(500).json({ message: "Error deleting partner request", error: err });
   }
 });
@@ -178,7 +198,6 @@ app.get('/partner-requests/sent/:senderEmail', async (req, res) => {
 
     res.status(200).json(requests);
   } catch (err) {
-    console.log("Error fetching partner requests:", err);
     res.status(500).json({ message: "Error fetching partner requests", error: err });
   }
 });

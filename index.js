@@ -174,10 +174,13 @@ app.post('/partner-requests', checkDuplicatePartnerRequest, async (req, res) => 
 });
 
 app.patch('/partner-requests', async (req, res) => {
-  const { senderEmail, receiverEmail, message } = req.body;
+  const { senderEmail, receiverId, message } = req.body;
 
   try {
-    const filter = { senderEmail, receiverId };
+    const filter = { 
+      senderEmail, 
+      receiverId 
+    };
 
     const result = await partnerRequestsCollection.updateOne(
       filter,

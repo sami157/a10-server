@@ -103,9 +103,27 @@ app.post('/study-partners', checkDuplicateEmail, async (req, res) => {
 
 app.get('/study-partners', async (req, res) => {
   try {
-    const partners = await partnersCollection.find().toArray();
+    const { subject, sortXp } = req.query;
+
+    const query = {};
+
+    if (subject) {
+      query.subject = { $regex: subject, $options: 'i' };
+    }
+
+    const options = {};
+
+    if (sortXp) {
+      options.sort = {
+        xpLevel: sortXp === 'desc' ? -1 : 1
+      };
+    }
+
+    const partners = await partnersCollection.find(query, options).toArray();
+
     res.status(200).send(partners);
   } catch (err) {
+    console.error("Error fetching study partners:", err);
     res.status(500).json({ message: "Error fetching study partners", error: err });
   }
 });
@@ -205,10 +223,8 @@ app.patch('/partner-requests', async (req, res) => {
 
 app.delete('/partner-requests', async (req, res) => {
   const { senderEmail, receiverId } = req.body;
-
   try {
     const filter = { senderEmail, receiverId };
-
     const result = await partnerRequestsCollection.deleteOne(filter);
 
     res.status(200).json({
@@ -219,7 +235,7 @@ app.delete('/partner-requests', async (req, res) => {
     console.error("Error deleting partner request:", err);
     res.status(500).json({
       message: "Error deleting partner request",
-      error: err
+      result: result
     });
   }
 });

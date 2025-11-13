@@ -55,6 +55,7 @@ run().catch(console.dir);
 
 const db = client.db("studyMateDB");
 const partnersCollection = db.collection("studyPartners");
+const partnerRequestsCollection = db.collection("partnerRequests");
 
 app.get('/', (req, res) => {
   res.send("StudyMate server is running");
@@ -80,12 +81,23 @@ app.post('/study-partners', checkDuplicateEmail, async (req, res) => {
 app.get('/study-partners', async (req, res) => {
   try {
     const partners = await partnersCollection.find().toArray();
-
     res.status(200).send(partners);
   } catch (err) {
     res.status(500).json({ message: "Error fetching study partners", error: err });
   }
 });
+
+app.get('/study-partners/find/:id', async (req, res) => {
+  try {
+    const id = req.params.id;
+    const partner = await partnersCollection.findOne({ _id: new ObjectId(id) });
+    res.status(200).send(partner);
+    console.log(partner)
+  } catch (err) {
+    res.status(500).json({ message: "Error fetching study partner", error: err });
+  }
+});
+
 
 app.get('/study-partners/check/:email', async (req, res) => {
   try {
@@ -115,26 +127,18 @@ app.get('/study-partners/top', async (req, res) => {
 
 app.post('/partner-requests', async (req, res) => {
   const { senderEmail, receiverId } = req.body;
-
   try {
-    const db = client.db("studyMateDB");
-    const partnersCollection = db.collection("studyPartners");
-
     const receiver = await partnersCollection.findOne({ _id: new ObjectId(receiverId) });
-
     await partnersCollection.updateOne(
       { _id: new ObjectId(receiverId) },
       { $inc: { partnerCount: 1 } }
     );
-
     const partnerRequest = {
       senderEmail,
       receiverId,
       status: 'pending',
       createdAt: new Date()
     };
-
-    const partnerRequestsCollection = db.collection("partnerRequests");
     const result = await partnerRequestsCollection.insertOne(partnerRequest);
     res.status(201).json({
       message: "Partner request sent successfully",
@@ -151,8 +155,6 @@ app.delete('/partner-requests/:requestId', async (req, res) => {
   const { requestId } = req.params;  // Get the requestId from the URL parameters
 
   try {
-    const db = client.db("studyMateDB");
-    const partnerRequestsCollection = db.collection("partnerRequests");
 
     const objectId = new ObjectId(requestId);
     const result = await partnerRequestsCollection.deleteOne({ _id: objectId });
@@ -168,9 +170,6 @@ app.get('/partner-requests/sent/:senderEmail', async (req, res) => {
   const { senderEmail } = req.params;
 
   try {
-    const db = client.db("studyMateDB");
-    const partnerRequestsCollection = db.collection("partnerRequests");
-
     const requests = await partnerRequestsCollection.find({ senderEmail }).toArray();
 
     if (requests.length === 0) {

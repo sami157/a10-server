@@ -203,19 +203,27 @@ app.patch('/partner-requests', async (req, res) => {
   }
 });
 
-app.delete('/partner-requests/:requestId', async (req, res) => {
-  const { requestId } = req.params;
+app.delete('/partner-requests', async (req, res) => {
+  const { senderEmail, receiverId } = req.body;
 
   try {
+    const filter = { senderEmail, receiverId };
 
-    const objectId = new ObjectId(requestId);
-    const result = await partnerRequestsCollection.deleteOne({ _id: objectId });
+    const result = await partnerRequestsCollection.deleteOne(filter);
 
-    res.status(200).json({ message: "Partner request deleted successfully" });
+    res.status(200).json({
+      message: "Partner request deleted successfully"
+    });
+
   } catch (err) {
-    res.status(500).json({ message: "Error deleting partner request", error: err });
+    console.error("Error deleting partner request:", err);
+    res.status(500).json({
+      message: "Error deleting partner request",
+      error: err
+    });
   }
 });
+
 
 app.get('/partner-requests/sent/:senderEmail', async (req, res) => {
   const { senderEmail } = req.params;

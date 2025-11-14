@@ -258,7 +258,5 @@ app.get('/partner-requests/sent/:senderEmail', async (req, res) => {
   }
 });
 
-
-app.listen(PORT, () => {
-  console.log(`Server is running on ${PORT}`);
-});
+const serverless = require("serverless-http");
+module.exports = serverless(app);

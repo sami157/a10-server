@@ -225,7 +225,13 @@ app.delete('/partner-requests', async (req, res) => {
   const { senderEmail, receiverId } = req.body;
   try {
     const filter = { senderEmail, receiverId };
+
     const result = await partnerRequestsCollection.deleteOne(filter);
+
+    await partnersCollection.updateOne(
+      { _id: new ObjectId(receiverId) },
+      { $inc: { partnerCount: -1 } }
+    );
 
     res.status(200).json({
       message: "Partner request deleted successfully"
@@ -235,7 +241,7 @@ app.delete('/partner-requests', async (req, res) => {
     console.error("Error deleting partner request:", err);
     res.status(500).json({
       message: "Error deleting partner request",
-      result: result
+      error: err
     });
   }
 });

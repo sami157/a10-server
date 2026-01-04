@@ -1,5 +1,6 @@
 const express = require('express');
 const cors = require('cors');
+const serverless = require("serverless-http");
 require('dotenv').config()
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const mongodbUri = process.env.MONGODB_URI
@@ -79,6 +80,10 @@ async function run() {
   }
 }
 run().catch(console.dir);
+
+app.listen(PORT, () => {
+  console.log('Server is running on port', PORT);
+})
 
 app.get('/', (req, res) => {
   res.send("StudyMate server is running");
@@ -257,6 +262,3 @@ app.get('/partner-requests/sent/:senderEmail', async (req, res) => {
     res.status(500).json({ message: "Error fetching partner requests", error: err });
   }
 });
-
-const serverless = require("serverless-http");
-module.exports = serverless(app);

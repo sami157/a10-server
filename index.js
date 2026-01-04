@@ -1,6 +1,5 @@
 const express = require('express');
 const cors = require('cors');
-const serverless = require("serverless-http");
 require('dotenv').config()
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const mongodbUri = process.env.MONGODB_URI
